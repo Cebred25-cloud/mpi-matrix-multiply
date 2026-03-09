@@ -1,0 +1,105 @@
+# MPI Distributed Matrix Multiply
+
+Distributed matrix multiplication implementing core MPI communication
+patterns (scatter, broadcast, gather, reduce) using Python multiprocessing.
+Includes strong and weak scaling analysis for NSF ACCESS allocation
+preparation.
+
+---
+
+## MPI Patterns Implemented
+
+| Pattern   | MPI Equivalent  | Used for                        |
+|-----------|-----------------|---------------------------------|
+| Scatter   | MPI_Scatter     | Distribute rows of A to workers |
+| Broadcast | MPI_Bcast       | Share matrix B with all workers |
+| Gather    | MPI_Gather      | Collect results from workers    |
+| Reduce    | MPI_Reduce      | Sum partial results             |
+
+---
+
+## Algorithm (1D Row Decomposition)
+```
+Matrix A (N×N), Matrix B (N×N)
+
+1. Rank 0 generates A and B
+2. Scatter rows of A — each rank gets N/P rows
+3. Broadcast full B to all ranks
+4. Each rank computes: local_result = local_A @ B
+5. Gather results back to rank 0
+6. Rank 0 assembles full result
+7. Verify: assert np.allclose(result, A @ B)
+```
+
+---
+
+## Scaling Results
+
+![Scaling Plots](output/scaling_plots.png)
+
+See [SCALING_REPORT.md](SCALING_REPORT.md) for full analysis and
+explanation of why these results motivate real MPI on an ACCESS cluster.
+
+---
+
+## Setup
+```bash
+python -m venv venv
+venv\Scripts\activate
+pip install numpy matplotlib pandas loguru
+```
+
+## Usage
+```bash
+# Phase 1 — MPI primitives
+python src/hello.py
+python src/send_recv.py
+python src/bcast_reduce.py
+
+# Phase 2 — distributed matrix multiply
+python src/matmul.py
+
+# Phase 3 — scaling benchmark
+python src/benchmark.py
+```
+
+## Project Structure
+```
+mpi-matrix-multiply/
+├── src/
+│   ├── hello.py          # SPMD hello world
+│   ├── send_recv.py      # Point-to-point communication
+│   ├── bcast_reduce.py   # Broadcast + reduce primitives
+│   ├── matmul.py         # Distributed matrix multiply
+│   └── benchmark.py      # Strong + weak scaling analysis
+├── output/
+│   ├── scaling_plots.png
+│   ├── strong_scaling.csv
+│   └── weak_scaling.csv
+├── SCALING_REPORT.md
+└── README.md
+```
+
+---
+
+## Note on Implementation
+
+This project uses Python `multiprocessing` to simulate MPI patterns
+on a Windows machine without admin access. The concepts — scatter,
+broadcast, gather, reduce, SPMD execution model — are identical to
+`mpi4py`. Porting to real MPI on an ACCESS Linux cluster is a
+straightforward substitution that would demonstrate the expected
+linear scaling behavior described in SCALING_REPORT.md.
+
+---
+
+## Connection to ACCESS Application
+
+This project produces the scaling analysis required in an ACCESS
+proposal to demonstrate that submitted code can effectively utilize
+parallel HPC resources. Combined with Projects 1 and 2:
+
+- Project 1 (Dask Pipeline) → parallel data infrastructure
+- Project 2 (GNN) → scientific ML model justifying GPU hours
+- Project 3 (MPI) → HPC readiness and scaling methodology
+```
